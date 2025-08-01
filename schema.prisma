@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Requirement {
+  id          String   @id @default(cuid())
+  problem     String
+  impact      String
+  timeline    DateTime
+  budgetMin   Int
+  budgetMax   Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  features    RequirementFeature[]
+  vendors     VendorScore[]
+  demoRequests DemoRequest[]
+  reports     Report[]
+}
+
+model RequirementFeature {
+  id            String @id @default(cuid())
+  requirementId String
+  name          String
+  priority      String // "must" or "nice"
+  
+  requirement   Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  
+  @@unique([requirementId, name])
+}
+
+model Vendor {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  features    String   // JSON string of features array
+  pricing     String   // JSON string of pricing tiers array
+  rating      Float?
+  website     String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  scores       VendorScore[]
+  demoRequests DemoRequest[]
+  meetings     Meeting[]
+  reportItems  ReportItem[]
+}
+
+model VendorScore {
+  id               String @id @default(cuid())
+  requirementId    String
+  vendorId         String
+  functionalScore  Float
+  technicalScore   Float
+  pricingScore     Float
+  stabilityScore   Float
+  totalScore       Float
+  createdAt        DateTime @default(now())
+  
+  requirement      Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  vendor           Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  
+  @@unique([requirementId, vendorId])
+}
+
+model DemoRequest {
+  id            String   @id @default(cuid())
+  requirementId String
+  vendorId      String
+  status        String   // "pending", "scheduled", "failed"
+  scheduledTime DateTime?
+  contactInfo   String?
+  customMessage String?
+  failureReason String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  requirement   Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  vendor        Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  meeting       Meeting?
+  
+  @@unique([requirementId, vendorId])
+}
+
+model Meeting {
+  id              String   @id @default(cuid())
+  demoRequestId   String   @unique
+  vendorId        String
+  calendarEventId String?
+  meetingUrl      String?
+  transcript      String?
+  keyPoints       String   // JSON array
+  status          String   // "scheduled", "in_progress", "completed", "failed"
+  startTime       DateTime
+  endTime         DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  demoRequest     DemoRequest @relation(fields: [demoRequestId], references: [id], onDelete: Cascade)
+  vendor          Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  questions       Question[]
+}
+
+model Question {
+  id          String   @id @default(cuid())
+  meetingId   String
+  questionText String
+  response    String?
+  timestamp   DateTime
+  createdAt   DateTime @default(now())
+  
+  meeting     Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+}
+
+model Report {
+  id            String   @id @default(cuid())
+  requirementId String
+  summary       String?
+  topVendors    String   // JSON array of vendor IDs
+  nextSteps     String?
+  status        String   // "generating", "completed"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  requirement   Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  items         ReportItem[]
+}
+
+model ReportItem {
+  id        String @id @default(cuid())
+  reportId  String
+  vendorId  String
+  analysis  String
+  score     Float
+  pros      String   // JSON array
+  cons      String   // JSON array
+  
+  report    Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  vendor    Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  
+  @@unique([reportId, vendorId])
+}
