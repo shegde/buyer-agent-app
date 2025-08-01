@@ -3,10 +3,5 @@
     "env": {
       "PRISMA_GENERATE_DATAPROXY": "true"
     }
-  },
-  "functions": {
-    "app/**/*.js": {
-      "runtime": "nodejs18.x"
-    }
   }
 }
